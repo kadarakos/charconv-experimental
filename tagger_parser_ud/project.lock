@@ -1,0 +1,75 @@
+preprocess:
+  cmd: python -m spacy run preprocess
+  script:
+    - mkdir -p corpus/UD_Slovak-SNK
+    - python -m spacy convert assets/UD_Slovak-SNK/sk_snk-ud-train.conllu corpus/UD_Slovak-SNK/
+      --converter conllu --n-sents 10 --merge-subtokens
+    - python -m spacy convert assets/UD_Slovak-SNK/sk_snk-ud-dev.conllu corpus/UD_Slovak-SNK/
+      --converter conllu --n-sents 10 --merge-subtokens
+    - python -m spacy convert assets/UD_Slovak-SNK/sk_snk-ud-test.conllu corpus/UD_Slovak-SNK/
+      --converter conllu --n-sents 10 --merge-subtokens
+    - mv corpus/UD_Slovak-SNK/sk_snk-ud-train.spacy corpus/UD_Slovak-SNK/train.spacy
+    - mv corpus/UD_Slovak-SNK/sk_snk-ud-dev.spacy corpus/UD_Slovak-SNK/dev.spacy
+    - mv corpus/UD_Slovak-SNK/sk_snk-ud-test.spacy corpus/UD_Slovak-SNK/test.spacy
+  deps:
+    - path: assets/UD_Slovak-SNK/sk_snk-ud-train.conllu
+      md5: 269e5b56e2d72106d335d5f30b03b339
+    - path: assets/UD_Slovak-SNK/sk_snk-ud-dev.conllu
+      md5: 63b9327326d19b2e6209dc48d1fd5fdc
+    - path: assets/UD_Slovak-SNK/sk_snk-ud-test.conllu
+      md5: 116d521c9ef16aa1baa36f68aaaa3c97
+  outs:
+    - path: corpus/UD_Slovak-SNK/train.spacy
+      md5: 4447bc3882ebb86f473ffe1266481af2
+    - path: corpus/UD_Slovak-SNK/dev.spacy
+      md5: 7c183c0ec8e400406fe085713819368a
+    - path: corpus/UD_Slovak-SNK/test.spacy
+      md5: e99a0fe8b3a48ac3210330f9dd58e1c0
+  spacy_version: 3.2.1
+  spacy_git_version: 2ff53834b
+train:
+  cmd: python -m spacy run train
+  script:
+    - python -m spacy train configs/charuni.cfg --output training/UD_Slovak-SNK --gpu-id
+      0 --paths.train corpus/UD_Slovak-SNK/train.spacy --paths.dev corpus/UD_Slovak-SNK/dev.spacy
+      --nlp.lang=sk
+  deps:
+    - path: corpus/UD_Slovak-SNK/train.spacy
+      md5: 4447bc3882ebb86f473ffe1266481af2
+    - path: corpus/UD_Slovak-SNK/dev.spacy
+      md5: 7c183c0ec8e400406fe085713819368a
+    - path: configs/charuni.cfg
+      md5: 962c340764e26e1848c91495ca2924c6
+  outs:
+    - path: training/UD_Slovak-SNK/model-best
+      md5: e074e986daff3fcf790373e415c6094e
+  spacy_version: 3.2.1
+  spacy_git_version: 2ff53834b
+evaluate:
+  cmd: python -m spacy run evaluate
+  script:
+    - python -m spacy evaluate ./training/UD_Slovak-SNK/model-best ./corpus/UD_Slovak-SNK/test.spacy
+      --output ./metrics/UD_Slovak-SNK.json --gpu-id 0
+  deps:
+    - path: training/UD_Slovak-SNK/model-best
+      md5: e074e986daff3fcf790373e415c6094e
+    - path: corpus/UD_Slovak-SNK/test.spacy
+      md5: e99a0fe8b3a48ac3210330f9dd58e1c0
+  outs:
+    - path: metrics/UD_Slovak-SNK.json
+      md5: 500d5b51cbf73c733d601f967dd70099
+  spacy_version: 3.2.1
+  spacy_git_version: 2ff53834b
+package:
+  cmd: python -m spacy run package
+  script:
+    - python -m spacy package training/UD_Slovak-SNK/model-best packages --name ud_sk_ewt
+      --version 0.0.0 --force
+  deps:
+    - path: training/UD_Slovak-SNK/model-best
+      md5: e074e986daff3fcf790373e415c6094e
+  outs:
+    - path: packages/sk_ud_sk_ewt-0.0.0/dist/en_ud_sk_ewt-0.0.0.tar.gz
+      md5: null
+  spacy_version: 3.2.1
+  spacy_git_version: 2ff53834b

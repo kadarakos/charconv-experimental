@@ -33,8 +33,10 @@ def docs2utf8() -> Model[List[Doc], List[Ints2d]]:
 def _doc2utf8(doc: Doc, xp) -> Ints2d:
     """
     Convet a single doc into a number of words per number of bytes matrix.
+    The integer 0 is reserved for padding and 256 for START and 257 for END.
     """
     byte_strings = [token.orth_.encode('utf8') for token in doc]
+    
     byte_strings = list(map(list, byte_strings))
     nr_char = max(len(bs) for bs in byte_strings)
     output = xp.zeros((len(byte_strings), nr_char), dtype='int')
@@ -209,7 +211,9 @@ class PytorchCharConv(torch.nn.Module):
 
 
 @spacy.registry.architectures("spacy.UTF8Conv.v1")
-def build_UTF8Conv(width: int) -> Model[List[Doc], List[Floats2d]]:
+def build_UTF8Conv(
+    width: int,
+) -> Model[List[Doc], List[Floats2d]]:
     """
     Takes a list of documents, turns them into utf8 bytes,
     and computes byte-level convolution for each token separately.
@@ -225,13 +229,15 @@ def build_UTF8Conv(width: int) -> Model[List[Doc], List[Floats2d]]:
     array packing all the Ints2d arrays into a
     num_docs x num_tokens x max_chars array. It provides this tensor
     to the PytorchCharConv and shapes it back after.
+
     """
     model = chain(
         docs2utf8(),
         with_padutf8arrays(
-            PyTorchWrapper(PytorchCharConv(width),
-                           convert_inputs=convert_inputs
-                           )
+            PyTorchWrapper(
+                PytorchCharConv(width),
+                convert_inputs=convert_inputs
+            )
         )
     )
     return model
